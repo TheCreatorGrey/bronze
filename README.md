@@ -1,3 +1,6 @@
+Keep in mind this is still early in development and is very much
+subject to change.
+
 === Introducing Bronze ===
 Bronze is a scripting language designed to be simple and portible. This 
 language is simple enough that more interpreters for other operating 

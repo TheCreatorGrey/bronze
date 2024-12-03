@@ -3,6 +3,22 @@
 #include <stdbool.h>
 #include <string.h>
 
+/*\
+
+BRONZE GLOSSARY
+
+Script:
+A file or chunk of text which holds bronze code.
+
+Lines:
+Commands separated by semicolons (;)
+Not always the same as the lines in the file.
+
+Segment:
+Parts of a command separated by spaces
+
+*/
+
 // A structure in which variables will be stored
 struct VarStorage {
     int integers[64];
@@ -10,30 +26,39 @@ struct VarStorage {
     int strings[64];
 };
 
+char* lnsentinel = "LINE_END";
 
 // Read and refine script files
-char** parse(char* filename) {
+char*** parse(char* filename) {
     // Read script file
     FILE* fptr;
     fptr = fopen(filename, "r");
 
     // Will store pointers for each line
-    char** lines = NULL;
+    char*** lines = NULL; // Where's my award?
     int lineCount = 0;
 
     // This will be toggled if the reader comes
     // across a comment symbol (`)
     bool commentIgnore = false;
 
+    // This will be toggled if the reader comes
+    // across parentheses, telling it to ignore spaces in-between them.
+    bool ignoreSpaces = false;
+
     // Whether the parser is on the beginning
     // of a line or not. Tells the reader
     // to ignore following spaces and is disabled
     // when non-space characters are found.
     bool lineBegin = true;
+
+    bool lineHasData = false;
     
-    // Start line length capacity at 64
-    int lineMemory = 64;
-    char* lineBuffer = malloc(lineMemory);
+    int segmentIndex = 0; // Index of current segment of current line being written to
+    int segmentMemory = 8; // Default memory given to a segment
+    char* segmentBuffer = malloc(segmentMemory);
+
+    char** lineBuffer = NULL; //malloc(lineMemory);
     char ch;
     while (ch != EOF) {
         ch = fgetc(fptr);
@@ -54,53 +79,100 @@ char** parse(char* filename) {
             continue;
         }
 
-        // Ignore spaces or indents at line beginnings
-        if (ch == *" ") {
-            if (lineBegin) {
+        // Enable/disable ignoreSpaces if there are parentheses
+        if (ch == *"(") {
+            ignoreSpaces = true;
+            continue;
+        } if (ch == *")") {
+            ignoreSpaces = false;
+            continue;
+        }
+
+        if (!ignoreSpaces) {
+            if (ch == *" ") {
+                // Ignore spaces or indents at line beginnings
+                if (lineBegin) {
+                    continue;
+                }
+
+                // If there is a space after a line begin,
+                // it (usually) indicates the end of an argument or segment of a line.
+
+                // Allocate space in line for another segment pointer
+                lineBuffer = realloc(lineBuffer, (segmentIndex+1)*sizeof(char*));
+                lineBuffer[segmentIndex] = segmentBuffer;
+
+                // Set memory for next segment
+                segmentMemory = 8;
+                segmentBuffer = malloc(segmentMemory);
+                segmentIndex++;
+
                 continue;
+            } else {
+                lineBegin = false;
             }
-        } else {
-            lineBegin = false;
         }
 
 
-        // Store line on semicolons
+        // Prepare for next line when a semicolon is found
         if (ch == *";") {
-            // Reallocate to hold another pointer (plus space for sentinel at the end)
+            // Continue if line is empty
+            if (!lineHasData) {
+                continue;
+            }
+
+            // Reallocate to hold another line pointer 
             lines = realloc(lines, (lineCount+1)*sizeof(char*));
 
-            // Make copy of line buffer
-            char* copy = malloc(strlen(lineBuffer)+1);
-            strcpy(copy, lineBuffer);
+            // Add line sentinel
+            //lineBuffer[segmentIndex] = lnsentinel;
 
-            // Append pointer of copy array of lines
-            lines[lineCount] = copy;
+            printf("%sghh", segmentBuffer);
 
-            // Reset line buffer for next line
-            lineMemory = 64;
-            lineBuffer = realloc(lineBuffer, lineMemory);
-            lineBuffer[0] = '\0';
+            lineBuffer = realloc(lineBuffer, (segmentIndex+1)*sizeof(char*));
+            lineBuffer[segmentIndex] = segmentBuffer; // Add last segment
+
+            // Append line to lines
+            lines[lineCount] = lineBuffer;
+
+            // Reset buffers for next line
+            segmentMemory = 8;
+            segmentBuffer = malloc(segmentMemory);
+            segmentIndex = 0;
+
+            // Setting the buffer to NULL leaves behind
+            // the memory address of the previous line
+            // so when realloc is called again, new
+            // memory will be created for the next line
+            // instead of overwriting the previous line
+            lineBuffer = NULL;
             lineCount++;
 
+            lineHasData = false;
             lineBegin = true;
         } else {
             // Append char to line buffer
-            int len = strlen(lineBuffer);
 
-            // Allocate more memory for line buffer if the line is too long
-            if (lineMemory < len+1) {
-                lineMemory += 128;
-                lineBuffer = realloc(lineBuffer, lineMemory);
+            int len = strlen(segmentBuffer);
+
+            // Allocate more memory for line segment if needed
+            if (segmentMemory < len+1) {
+                segmentMemory += 8;
+                segmentBuffer = realloc(
+                    segmentBuffer, segmentMemory
+                );
             }
 
-            lineBuffer[len] = ch;
-            lineBuffer[len + 1] = '\0';
+            segmentBuffer[len] = ch;
+            segmentBuffer[len + 1] = '\0';
+            lineHasData = true;
         }
     }
 
-    // Add sentinel
-    char* sentinel = "END";
-    lines[lineCount] = sentinel;
+    // Add script sentinel
+    char** scsentinel = malloc(1);
+    scsentinel[0] = "SCPT_END";
+    lines[lineCount] = scsentinel;
 
     return lines;
 }
@@ -113,24 +185,26 @@ void executeInternal(char** obj) {
 
 
 int main() {
-    char** main = parse("main.bze");
+    char*** main = parse("sample.bze");
 
-    int currentLine = 0;
-    char* line;
+    printf("%p fhh", main);
+
+    int currentLine;
+    char** line;
+
+    int currentSegment;
+    char* segment;
+
+    currentLine = 0;
     while (true) {
         line = main[currentLine];
-        printf("\n%s", line);
+
+        printf("%s %s\n", line[0], line[1]);
 
         // Break if sentinel (end of script) is found
-        if (strcmp(line, "END") == 0) {
+        if (strcmp(line[0], "SCPT_END") == 0) {
+            printf("\nScript finished\n");
             break;
-        }
-
-        int lineLength = strlen(line);
-        for (int i=0; i<lineLength; i++) {
-            char ch = line[i];
-
-            printf("%c\n", ch);
         }
 
         currentLine++;

@@ -56,7 +56,7 @@ if copy:condition;
     The following lines if the supplied condition is true. This will apply to all lines below this statement until
     the builtin "endif" command, which does the opposite. `
 
-    log str:"This will log because the condition is true";
+    log str:(This will log because the condition is true);
 
     `Indents can be added purely for looks, but they are not strictly necessary as the interpreter ignores them.`
 endif;
