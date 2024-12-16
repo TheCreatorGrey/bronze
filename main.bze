@@ -1,12 +1,8 @@
-log str:Hello1;
-log str:Hello2;
-log str:Hello3;
-log str:Hello4;
-log str:Hello5;
-log str:Hello6;
-log str:Hello7;
-log str:Hello8;
-log str:Hello9;
-log str:Hello10;
-log str:Hello11;
-log str:Hello12;
+log (Hello World!);
+log int:4;
+
+`Comment`
+    `Comment with indent`
+
+make newVar (this is a string);
+log ref:newVar;
