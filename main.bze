@@ -1,8 +1,0 @@
-log (Hello World!);
-log int:4;
-
-`Comment`
-    `Comment with indent`
-
-make newVar (this is a string);
-log ref:newVar;
