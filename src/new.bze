@@ -1,0 +1,28 @@
+`! tells the parser that this is a builtin command`
+!log "Hello, World!";
+!log 100;
+
+`Make a string variable called "newvar" with an allowance of 16 bits`
+make newVar str[256];
+set newVar "This is a string!";
+
+
+`
+On second thought... maybe I bring back the implicit type declarations.
+Many parameters will require strings and I don't want to have quotes everywhere.
+If i void quotes, how will the parser know the difference between integers and strings?
+`
+
+`
+Instead of using implicit types like int8, int16 and so on, the parser should only need
+to allocate as much room as it needs in implicit storage as it needs for that value.
+
+For declaring types during runtime, specifying how much space is more appropriate.
+`
+
+`Possible builtin dynamic memory commands`
+!alloc int:8;
+`Change the fourth byte to 64`;
+!write int:4 int:64;
+`Reference the eighth byte in memory`
+!log mem:8;

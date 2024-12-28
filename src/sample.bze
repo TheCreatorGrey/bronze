@@ -1,0 +1,68 @@
+`
+The interpreter ignores:
+blank lines
+newlines
+indents or spaces before lines
+text between grave accents (comments)
+
+Semicolons (;) should not be necessary on empty lines or lines which
+Are entirely taken up by comments because the interpreter ignores them.
+
+Spaces are an important part of how the interpreter functions. They separate different parts of the command.
+The first "chunk" is the name of a command which will trigger either an internal command (C code in the interpreter)
+or a Bronze command / function. The following are arguments, which will depend on the command.
+
+Datatypes are indicated by the keyword before the colon (:) in-between the 3 byte keyword and the value respectively.
+"str" tells the interpreter that the following is a string.
+"copy" tells the interpreter that the following is the name of a variable, and it's value should be "copied".
+The same applies for other common datatypes like "float" and higher-level datatypes like "str".
+It is important that there are no spaces between the colon and the value or type keyword.
+`
+
+`
+Here, the string "Hello" is assigned to the new variable "testvar" using the built-in "make" function.
+The variable's datatype will be restricted to the datatype of the initial value, in this case a string.
+`
+make testvar Hello;
+
+`
+By default, command arguments will be interpreted as strings if no datatype is given.
+A non-string value must be prefaced by a type and a colon, like this:
+`
+make number_variable int:4;
+
+`The value can be changed with the built in "mod" function, which is short for "modify".
+The datatype must be the same as the previous.
+
+When giving command arguments with spaces such as strings, parentheses must be used.
+These tell the interpreter to ignore the spaces between them instead of interpreting them
+as the end of the argument or section.
+`
+mod testvar (Hello again!);
+
+`Here, the variable's value is copied into the built-in "log" command, which will print it out or "log" it.`
+log copy:testvar;
+
+`A unique feature of this programming language will be the ability to dynamically change
+the line of code which is being run using mark and return commands`
+
+`mark line with name "loop"`
+mark loop;
+    log (a very weird loop);
+if ref:your_condition_here;
+    `Return to marked line named "loop"`
+    return loop;
+endif;
+
+`"ref" (or "reference") may be used instead of "copy" to check the value of the boolean every loop.`
+
+make condition bool:true;
+if copy:condition;
+    `The builtin "if" command will toggle a variable in the interpreter's C code which tells the interpreter to only run
+    The following lines if the supplied condition is true. This will apply to all lines below this statement until
+    the builtin "endif" command, which does the opposite. `
+
+    log (This will log because the condition is true);
+
+    `Indents can be added purely for looks, but they are not strictly necessary as the interpreter ignores them.`
+endif;

@@ -1,0 +1,4 @@
+The rust compiler wants to know what datatype
+a given function will return so type errors can
+be prevented at compile time. This can also 
+consequentially prevent security problems.

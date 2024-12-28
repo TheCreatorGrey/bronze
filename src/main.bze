@@ -1,0 +1,33 @@
+log (Hello World!);
+log int8:100;
+
+`
+There is no reason to declare the
+type of an implicit value like above.
+Since these values are processed
+pre-runtime, any performance difference
+would not matter.
+
+Type declarations make more sense
+in something like variable declaration,
+because this is handled at runtime.
+
+For example, to make an integer with
+an 8-byte allowance:
+make int:8 number_var;
+
+And later modify it:
+set number_var 12;
+
+Since "12" is implicit and will be
+parsed before runtime, this will not
+make any performance difference during
+runtime and a type declaration is not
+needed.
+`
+
+`Comment`
+    `Comment with indent`
+
+make newVar (this is a string);
+log ref:newVar;
