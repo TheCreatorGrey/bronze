@@ -1,4 +1,6 @@
 use std::fs;
+#[path = "encoder.rs"]
+mod encoder;
 
 pub struct Storage {
     // The lookup table:
@@ -24,29 +26,47 @@ pub struct Storage {
 
 
 
-fn raise(line: i32, message: &str) {
-    eprintln!("\x1b[31m\n[Bronze] \x1b[91mError at line {}: {}\n\x1b[0m", line, message);
+fn inform(message: String) {
+    eprintln!("\x1b[31m[Bronze] \x1b[92m{}\x1b[0m", message.as_str());
+}
+
+fn raise(line: u8, message: String) {
+    eprintln!("\x1b[31m\n[Bronze] \x1b[91mError at line {}: {}\n\x1b[0m", line, message.as_str());
     std::process::exit(1);
 }
 
-fn warn(line: i32, message: &str) {
-    eprintln!("\x1b[31m\n[Bronze] \x1b[93mWarning at line {}: {}\n\x1b[0m", line, message);
+fn warn(line: u8, message: String) {
+    eprintln!("\x1b[31m\n[Bronze] \x1b[93mWarning at line {}: {}\n\x1b[0m", line, message.as_str());
 }
 
 
-// Takes a file name and returns a refined 2D vector which
-// will be easier and faster to execute later.
-pub fn parse(file: &str) -> (Vec<Vec<i32>>, Storage) {
-    let file = fs::read_to_string(file)
-        .expect("log (Could not read file);");
+// Takes a script file and parses it into an array of binary which will be easier to process later
+pub fn parse(file: &str) -> (Vec<Vec<Vec<u8>>>, Storage) {
+    let file = match fs::read_to_string(file) {
+        Ok(r) => {
+            inform(
+                format!("Read script file \"{}\" successfully", file)
+            ); r
+        },
+        
+        Err(_e) => {
+            raise(
+                0 as u8, 
+                format!("Could not read \"{}\"", file)
+            ); 
+            String::from("No content")
+        }
+    };
 
-    let mut this_storage = Storage {
+    // Explicit storage
+    let mut expl_storage = Storage {
         lookup: Vec::new(),
         raw: Vec::new()
     };
 
-    let mut parsed: Vec<Vec<i32>> = Vec::new();
-    let mut line: Vec<i32> = Vec::new();
+    let mut parsed: Vec<Vec<Vec<u8>>> = Vec::new();
+    let mut line: Vec<Vec<u8>> = Vec::new();
+    let mut expl_binary: Vec<u8> = Vec::new();
     let mut chunk = String::new();
     let mut chunk_type = 0;
 
@@ -55,16 +75,15 @@ pub fn parse(file: &str) -> (Vec<Vec<i32>>, Storage) {
 
     let mut line_started: bool = true;
 
-    let mut line_count = 1;
-    line.push(1);
-
-    let charmap = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+    let mut line_count: u8 = 1;
+    //line.push(1);
 
     // These are unrelated variables which are
     // referenced and changed throughout the loop
     let mut raw_start = 0;
 
     let mut parsed_integer = 0;
+    let mut leading_zero: bool = false;
     // ==========================================
 
     for c in file.chars() {
@@ -115,17 +134,13 @@ pub fn parse(file: &str) -> (Vec<Vec<i32>>, Storage) {
                 // character by character, if a colon is found
                 // the chunk variable must contain the type name.
 
-                match chunk.as_str() {
-                    "str" => { chunk_type = 0 }, // String (0) (declaration optional)
-                    "int8" => { chunk_type = 1 }, // 8-bit integer (1)
-                    "int16" => { chunk_type = 2 }, // 16-bit integer (2)
-                    "int32" => { chunk_type = 3 }, // 32-bit integer (3)
-                    "int64" => { chunk_type = 4 }, // 64-bit integer (4)
-                    "int128" => { chunk_type = 5 }, // Gigantic 128-bit integer (5)
-                    "float" => { chunk_type = 6 }, // Float (6)
-                    "bool" => { chunk_type = 7 }, // Boolean (7)
-                    _ => { chunk_type = 0 }, // Default to string (0)
-                }
+                chunk_type = match chunk.as_str() {
+                    "str" => 0, // String (0) (declaration optional)
+                    "int" => 1, // Integer (1)
+                    "float" => 2, // Float (2)
+                    "bool" => 3, // Boolean (3)
+                    _ => 4, // Default to string (0)
+                };
 
                 // Since the chunk is built char by char, Clearing the chunk
                 // at this point will make it so that when the delimiter code
@@ -151,73 +166,42 @@ pub fn parse(file: &str) -> (Vec<Vec<i32>>, Storage) {
                 println!("{chunk_type} {chunk}");
 
                 // Add value to storage
-                raw_start = this_storage.raw.len() as i32;
+                raw_start = expl_binary.len() as i32;
+                expl_binary.push(chunk_type);
                 match chunk_type {
-                    0 => { // Type is a string
-                        // Iterate each char in the string
-                        for s in chunk.chars() {
-                            // Push byte of char to raw storage
-                            this_storage.raw.push(
-                                match charmap.find(s) {
-                                    Some(value) => {
-                                        value as u8
-                                    }
+                    0 => {encoder::enc_ascii(&mut expl_binary, chunk)}, // String (ASCII)
 
-                                    None => 0
-                                }
-                            )
-                        }
-                    },
-
-                    // Type is in the integer range of types (1-5, 8-bit through 128-bit)
-                    1..5 => {
+                    // Type is an integer
+                    1 => {
                         // Parse to largest possible size
-                        parsed_integer = match chunk.parse::<u128>() {
+                        parsed_integer = match chunk.parse::<i128>() {
                             Ok(i) => i,
                             Err(e) => {
-                                raise(line_count, format!(
-                                    "Could not interpret \"{}\" as an integer. The given value is either too large or cannot be represented by an integer.", chunk
-                                ).as_str());
-                                0
+                                raise(
+                                    line_count, format!(
+                                        "The given value \"{}\" cannot be interpreted as a 128-bit integer.", chunk
+                                    )
+                                ); 0
                             }
                         };
 
-                        parsed_integer = match chunk_type {
-                            1 => parsed_integer << 120, // Shift down to 8
-                            2 => parsed_integer << 112, // Shift down to 16
-                            3 => parsed_integer << 96, // Shift down to 32
-                            4 => parsed_integer << 64, // Shift down to 64
-                            5 => parsed_integer, // Already 128 bits (don't shift)
-                            _ => parsed_integer
-                        };
-
-                        for (count, b) in parsed_integer.to_be_bytes().iter().enumerate() {
-                            // Cut off unused bytes
-                            match chunk_type {
-                                1 => {if 1 < count {break}}, // Cut off at 1 byte (8 bits)
-                                2 => {if 2 < count {break}}, // Cut off at 2 bytes (16 bits)
-                                3 => {if 4 < count {break}}, // Cut off at 4 bytes (32 bits)
-                                4 => {if 8 < count {break}}, // Cut off at 8 bytes (64 bits)
-                                5 => {if 16 < count {break}}, // Cut off at 16 bytes (128 bits)
-                                _ => {}
-                            };
-
-                            // Push byte chunk to storage
-                            this_storage.raw.push(*b)
-                        }
+                        encoder::enc_int(&mut expl_binary, parsed_integer)
                     },
 
                     _ => {}
                 }
 
+                line.push(expl_binary);
+                expl_binary = Vec::new();
+
                 // Add indices to lookup table
-                this_storage.lookup.push(
-                    vec![
-                        chunk_type, // Numerical representation of datatype
-                        raw_start, // Start index in raw storage
-                        this_storage.raw.len() as i32 - 1 // End index in raw storage
-                    ]
-                );
+                //expl_storage.lookup.push(
+                //    vec![
+                //        chunk_type, // Numerical representation of datatype
+                //        raw_start, // Start index in raw storage
+                //        expl_binary.len() as i32 - 1 // End index in raw storage
+                //    ]
+                //);
                 
                 // Assign new string to hold next chunk
                 chunk = String::new();
@@ -229,7 +213,7 @@ pub fn parse(file: &str) -> (Vec<Vec<i32>>, Storage) {
                     parsed.push(line);
                     line = Vec::new();
                     // Add line number for debugging purposes
-                    line.push(line_count);
+                    //line.push(line_count);
 
                     line_started = true;
                 }
@@ -241,5 +225,5 @@ pub fn parse(file: &str) -> (Vec<Vec<i32>>, Storage) {
         chunk.push(c);
     }
 
-    return (parsed, this_storage);
+    return (parsed, expl_storage);
 }

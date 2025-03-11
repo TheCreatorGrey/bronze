@@ -1,0 +1,14 @@
+incl standard
+incl utf8:(./command.bzec);
+
+log utf8:(Hello World!);
+log uint8:4;
+
+run utf8:(interpreter) shitter balls;
+
+make utf8:newVar utf8:(this is a string);
+log ref:newVar;
+
+`
+It appears that after the second section of a line if there is one, an odd set of characters appears
+`

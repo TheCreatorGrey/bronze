@@ -1,0 +1,18 @@
+Corny notes becaus im learning C
+
+A memory address is basically an integer or number
+it can be iterated to access neighboring values
+if the values are allocated at the same time,
+this can be used as an array.
+
+Since the pointer has a pre defined type, iterating 
+a pointer like pointer += 1 will move the pointer by 
+the size of that value type, selecting the neighboring value.
+
+Indexing a pointer like pointer[1] will get the value 
+that many steps ahead of itself.
+
+An "array" is really just a chunk of memory.
+
+\/ this is a conversion, converting a null pointer to a char pointer
+(char*) malloc(200);
