@@ -1,0 +1,43 @@
+*Comment. anything between asterisks is ignored.*
+
+log:0;
+log:64;
+
+* Memory slot test *
+
+write: #var1, 32;
+log: $var1;
+write: #var1, 3;
+log: $var1;
+
+log: 1000;
+
+
+* Math test *
+
+write: #num1, 2;
+write: #num2, 4;
+
+sum: #result, $num1, $num2;
+log: $result;
+
+
+*Square the result and save
+the result to itself*
+
+product: 
+  #result, 
+  $result, 
+  $result
+;
+
+log: $result;
+
+*Check for things like camera position*
+
+log: $camera_x;
+log: $camera_y;
+log: $camera_z;
+
+
+invalidcommandtest 0;
